@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_app/login.dart';
 import 'package:flutter_app/userprofile.dart';
 import 'package:http/http.dart' as http;
 
@@ -15,19 +16,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Fitness App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const LoginPage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -65,7 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
           if (snapshot.hasData) {
             return Scaffold(
               appBar: AppBar(
-                title: Text(widget.title),
+                title: const Text("Fitness info"),
               ),
               body: ListView(
                 children: <Widget>[

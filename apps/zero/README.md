@@ -14,7 +14,7 @@ Only members of the project can read the README.md from the ignore folder
 # Stack 
 
 ## Frontend
-* Angular v12.2.7
+* Flutter v 2.8.1
 ### Structure
 
 
@@ -29,10 +29,6 @@ Only members of the project can read the README.md from the ignore folder
 ## Testing
 * Docker, (tes in docker containers from linux VM) v20.10.7
 
-### E2E
-* rspec    v3.10.0
-* capybara v3.35.3
-* puffing billy v2.4.1
 
 #### Structure
 
