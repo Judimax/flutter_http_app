@@ -9,3 +9,4 @@ flask-marshmallow
 marshmallow-sqlalchemy
 translatepy
 flask_restful
+flask_httpauth

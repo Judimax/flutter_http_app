@@ -11,6 +11,7 @@ from flask_socketio import SocketIO
 import sqlalchemy
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api, Resource
+from flask_httpauth import HTTPBasicAuth
 from flask_marshmallow import Marshmallow
 import pprint
 import json
@@ -18,9 +19,11 @@ import my_util
 import requests
 import time
 
+
 app = Flask(__name__)
 app.config.update(
     DEBUG=True,
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SQLALCHEMY_DATABASE_URI='sqlite:///crfdb.db',
     # SERVER_NAME="127.0.0.1:5000",
     USE_NGROK=False,
@@ -29,6 +32,8 @@ app.config.update(
 )
 db = SQLAlchemy(app)
 api = Api(app)
+auth = HTTPBasicAuth()
+
 
 
 
@@ -40,7 +45,38 @@ class UserProfile(db.Model):
     loyalty_points = db.Column(db.Integer)
     fitness_goal = db.Column(db.Integer)
 
-db.create_all()
+class ExerciseProfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String, primary_key=True)
+    password = db.Column(db.String)
+
+class Exercise(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    client = db.Column(db.String)
+    title = db.Column(db.String)
+    reps = db.Column(db.Integer)
+
+
+from seed_db import db_init
+db_init()
+
+@auth.verify_password
+def verify_password(username, password):
+    if len(ExerciseProfile.query.filter_by(username=username).filter_by(password=password).all()) > 0:
+        return username
+
+class ProgramResource(Resource):
+    @auth.login_required
+    def get(self):
+        return [
+            {
+                'title': exercise.title,
+                'reps': exercise.reps
+            } for exercise in Exercise.query.filter_by(client=auth.current_user())
+        ]
+
+api.add_resource(ProgramResource, '/program')
+
 
 class UserProfileResource(Resource):
     def get(self):
