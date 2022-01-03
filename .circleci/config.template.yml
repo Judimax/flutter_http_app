@@ -1,0 +1,62 @@
+version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.1.3
+jobs:
+  frontend:
+    docker:
+      - image: windmillcode/angular-tornado-capybara:circleci-0.0.1 
+    environment:
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching:        
+      - browser-tools/install-browser-tools
+      - checkout    
+      - restore_cache:
+          keys:
+            # Find a cache corresponding to this specific package-lock.json
+            - npm-deps-v2-{{ checksum "/root/project/AngularApp/package.json" }}
+     
+      - restore_cache:
+          keys:
+            # Find a cache corresponding to this specific package-lock.json
+            - bundle-deps-v1-{{ checksum "/root/project/AngularApp/testing/e2e/Gemfile.lock" }}
+
+      - run:  
+          . /etc/profile.d/01-custom-docker-setup.sh;    
+          echo $PATH;
+          cd ~/project/AngularApp/testing/e2e ; 
+          bundle install &
+          cd ~/project/AngularApp ;
+          npm install -s;   
+      - save_cache:
+          key: npm-deps-v2-{{ checksum "/root/project/AngularApp/package.json" }}
+          paths:
+            - /root/project/AngularApp/node_modules  
+      - save_cache:
+          key: bundle-deps-v1-{{ checksum "/root/project/AngularApp/testing/e2e/Gemfile.lock" }}
+          paths:
+            - /root/project/AngularApp/testing/e2e/vendor/bundle    
+      - run:
+          . /etc/profile.d/01-custom-docker-setup.sh;   
+          cd ~/project/AngularApp;
+          npx ng serve -c=firebaseprod  --port=4202 &
+          sleep 30s;
+          cd ~/project/AngularApp/testing/e2e;
+          bundle exec rspec portfolio-e2e-circleci.rb ;                       
+      - run:
+          . /etc/profile.d/01-custom-docker-setup.sh;   
+          cd ~/project/AngularApp;
+          npx ng run AngularApp:judima:firebaseprod;
+          npx firebase deploy --project auxillary-305605 --token $FIREBASE_TOKEN;
+
+
+workflows:
+  version: 2.1
+  e2e:     
+    jobs: 
+      - frontend:  
+          filters:  # using regex filters requires the entire branch to match
+            branches:
+              only:  # only branches matching the below regex filters will run
+                - circleci-dev      
+      

@@ -1,0 +1,2 @@
+web: cd flask/dev;gunicorn -k gevent -w 1 app:app
+heroku ps:scale web=1

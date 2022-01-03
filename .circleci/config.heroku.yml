@@ -1,0 +1,38 @@
+version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.1.3
+jobs:
+  frontend:
+    docker:
+      - image: windmillcode/angular-tornado-capybara:circleci-0.0.8
+    environment:
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching:       
+      - checkout    
+             
+      - run:
+          . /etc/profile.d/01-custom-docker-setup.sh;
+          cd ~/project;
+          touch ~/.netrc; chmod 777 ~/.netrc; 
+          echo "machine api.heroku.com" >> ~/.netrc;  
+          echo "login $HEROKU_LOGIN" >> ~/.netrc; 
+          echo "password $HEROKU_API_KEY" >> ~/.netrc;
+          echo "machine git.heroku.com" >> ~/.netrc;
+          echo "login $HEROKU_LOGIN" >> ~/.netrc; 
+          echo "password $HEROKU_API_KEY" >> ~/.netrc;    
+          heroku git:remote -a windmillcode-site;        
+          git subtree push --prefix AngularApp/backend/python heroku master;
+
+
+
+workflows:
+  version: 2.1
+  e2e:     
+    jobs: 
+      - frontend:  
+          filters:  # using regex filters requires the entire branch to match
+            branches:
+              only:  # only branches matching the below regex filters will run
+                - master      
+      

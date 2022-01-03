@@ -1,0 +1,91 @@
+version: 2.1
+orbs:
+  browser-tools: circleci/browser-tools@1.2.2
+jobs:
+  frontend:
+    docker:
+      - image: windmillcode/angular-tornado-capybara-log4j2:0.0.6
+    parallelism: 1
+    environment:
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching:  
+      - browser-tools/install-browser-tools   
+      - checkout    
+      - restore_cache:
+          keys:
+            # Find a cache corresponding to this specific package-lock.json
+            - npm-deps-v1-{{ checksum "/root/project/AngularApp/package.json" }}
+     
+      - restore_cache:
+          keys:
+            # Find a cache corresponding to this specific package-lock.json
+            - bundle-deps-v1-{{ checksum "/root/project/AngularApp/testing/e2e/Gemfile.lock" }}
+
+      - restore_cache:
+          keys:
+            # Find a cache corresponding to this specific package-lock.json
+            - site-packages-deps-v1-{{ checksum "/root/project/AngularApp/backend/python/linux-requirements.txt" }}            
+
+      - run:  
+          
+          . /etc/profile.d/01-custom-docker-setup.sh;    
+          echo $PATH;
+          cd ~/project/AngularApp/testing/e2e ; 
+          bundle install;
+          cd ~/project/AngularApp/backend/python;
+          pip install -r requirements.txt --upgrade --target ./site-packages/linux;
+          cd ~/project/AngularApp ;
+          npm install -s;   
+      - save_cache:
+          key: npm-deps-v1-{{ checksum "/root/project/AngularApp/package.json" }}
+          paths:
+            - /root/project/AngularApp/node_modules  
+      - save_cache:
+          key: bundle-deps-v1-{{ checksum "/root/project/AngularApp/testing/e2e/Gemfile.lock" }}
+          paths:
+            - /root/project/AngularApp/testing/e2e/vendor/bundle  
+      - save_cache:
+          key: site-packages-deps-v1-{{ checksum "/root/project/AngularApp/backend/python/linux-requirements.txt" }}   
+          paths:
+            - /root/project/AngularApp/backend/python/site-packages
+      - run:
+          . /etc/profile.d/01-custom-docker-setup.sh;   
+          cd ~/project/AngularApp/backend/python;
+          python tornado_heroku_server.py &
+
+          cd ~/project/AngularApp;
+          npx ng serve -c=amplifyStage  --port=4202 --live-reload=false &
+          sleep 60s;
+          cd ~/project/AngularApp/testing/e2e;
+          bundle exec rspec target-e2e-circleci.rb ;             
+      - run:
+          . /etc/profile.d/01-custom-docker-setup.sh;
+          cd ~/project/AngularApp;              
+          chmod 777 deploy_amplify.sh &
+          npx ng run AngularApp:judima:amplifyprod;
+          echo $PATH;
+          ./deploy_amplify.sh;  
+          cd ~/project;
+          touch ~/.netrc; chmod 777 ~/.netrc; 
+          echo "machine api.heroku.com" >> ~/.netrc;  
+          echo "login $HEROKU_LOGIN" >> ~/.netrc; 
+          echo "password $HEROKU_API_KEY" >> ~/.netrc;
+          echo "machine git.heroku.com" >> ~/.netrc;
+          echo "login $HEROKU_LOGIN" >> ~/.netrc; 
+          echo "password $HEROKU_API_KEY" >> ~/.netrc;    
+          heroku git:remote -a windmillcode-site;        
+          git subtree push --prefix AngularApp/backend/python heroku master;
+
+
+
+workflows:
+  version: 2.1
+  e2e:     
+    jobs: 
+      - frontend:  
+          filters:  # using regex filters requires the entire branch to match
+            branches:
+              only:  # only branches matching the below regex filters will run
+                - master      
+      

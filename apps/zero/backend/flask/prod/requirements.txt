@@ -1,0 +1,10 @@
+﻿requests
+flask
+boto3
+pyngrok
+flask_socketio
+gunicorn
+gevent
+flask_sqlalchemy
+flask-marshmallow
+marshmallow-sqlalchemy
